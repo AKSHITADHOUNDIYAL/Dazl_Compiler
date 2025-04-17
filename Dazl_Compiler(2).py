@@ -44,13 +44,12 @@ TT_RPAREN    = 'RPAREN'
 TT_EOF       = 'EOF'
 
 SHAPE_KEYWORDS = [
-    'CIRCLE',
-    'SQUARE',
-    'RECTANGLE',
-    'OVAL',
-    'RHOMBUS',
-    'TRIANGLE',
-    'POLYGON'
+    'CUBE',
+    'SPHERE',
+    'CUBOID',
+    'CYLINDER',
+    'CONE',
+    'PYRAMID'
 ]
 
 class Token:
@@ -171,29 +170,20 @@ def parse(tokens):
 # Semantic Analysis
 def analyze(ast):
     shape_defaults = {
-        "CIRCLE": [50],
-        "SQUARE": [50],
-        "RECTANGLE": [100, 50],
-        "OVAL": [80, 40],
-        "RHOMBUS": [60, 60],
-        "TRIANGLE": [80, 60],
-        "POLYGON": [60, 60, 60]
+        "SPHERE": [100],
+        "CUBE": [100],
+        "CUBOID": [100, 50, 30],
+        "CYLINDER": [30, 70],
+        "CONE": [30, 70],
+        "PYRAMID": [60, 80]
     }
 
     for node in ast:
-        shape = node.value
-        params = node.params
+        shape = node.value.upper()
         expected = shape_defaults.get(shape, [])
-
-        if shape == "POLYGON":
-            if len(params) < 3:
-                print(f"Semantic Error: POLYGON requires at least 3 sides.")
-                return None
-        elif len(params) < len(expected):
+        if not node.params or len(node.params) < len(expected):
             print(f"Warning: {shape} expects {len(expected)} parameters, using default values.")
-            params += expected[len(params):]
-
-        node.params = params
+            node.params = expected
     return ast
 
 #  IR Generation
@@ -235,68 +225,108 @@ def generate_machine_code(assembly):
 
 
 # Execution/Rendering
-def render(ir):
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_xlim(0, 600)
-    ax.set_ylim(0, 600)
-    ax.set_aspect('equal')
+def render_3d(ir):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_box_aspect([1, 1, 1])
+    ax.set_xlim([0, 1000])
+    ax.set_ylim([0, 1000])
+    ax.set_zlim([0, 1000])
     ax.axis('off')
 
-    positions = [(100, 500), (300, 500), (500, 500),
-                 (100, 300), (300, 300), (500, 300),
-                 (100, 100), (300, 100), (500, 100)]
-    pos_index = 0
+    origin_x, origin_y, origin_z = 50, 50, 50
+    spacing = 250
 
-    for node in ir:
-        if pos_index >= len(positions):
-            break
+    for i, node in enumerate(ir):
         shape, params = node.value, node.params
-        center_x, center_y = positions[pos_index]
-        pos_index += 1
+        x = origin_x + (i % 2) * spacing
+        y = origin_y + ((i // 2) % 2) * spacing
+        z = origin_z + (i // 4) * spacing
 
-        if shape == "CIRCLE":
-            ax.add_patch(patches.Circle((center_x, center_y), params[0], fill=False))
-        elif shape == "SQUARE":
-            side = params[0]
-            ax.add_patch(patches.Rectangle((center_x - side/2, center_y - side/2), side, side, fill=False))
-        elif shape == "RECTANGLE":
-            width, height = params
-            ax.add_patch(patches.Rectangle((center_x - width/2, center_y - height/2), width, height, fill=False))
-        elif shape == "OVAL":
-            width, height = params
-            ax.add_patch(patches.Ellipse((center_x, center_y), width, height, fill=False))
-        elif shape == "RHOMBUS":
-            d1, d2 = params
-            verts = [
-                (center_x, center_y + d2 / 2),
-                (center_x + d1 / 2, center_y),
-                (center_x, center_y - d2 / 2),
-                (center_x - d1 / 2, center_y),
-                (center_x, center_y + d2 / 2)
-            ]
-            codes = [Path.MOVETO] + [Path.LINETO]*3 + [Path.CLOSEPOLY]
-            ax.add_patch(patches.PathPatch(Path(verts, codes), fill=False))
-        elif shape == "TRIANGLE":
-            base, height = params
-            verts = [
-                (center_x, center_y + height / 2),
-                (center_x + base / 2, center_y - height / 2),
-                (center_x - base / 2, center_y - height / 2),
-                (center_x, center_y + height / 2)
-            ]
-            codes = [Path.MOVETO] + [Path.LINETO]*2 + [Path.CLOSEPOLY]
-            ax.add_patch(patches.PathPatch(Path(verts, codes), fill=False))
-        elif shape == "POLYGON":
-            sides = len(params)
-            angles = np.linspace(0, 2 * np.pi, sides, endpoint=False)
-            verts = [(center_x + params[i] * np.cos(angle), center_y + params[i] * np.sin(angle)) for i, angle in enumerate(angles)]
-            verts.append(verts[0])
-            codes = [Path.MOVETO] + [Path.LINETO] * (sides - 1) + [Path.CLOSEPOLY]
-            ax.add_patch(patches.PathPatch(Path(verts, codes), fill=False))
+        if shape == "SPHERE":
+            r = params[0]
+            u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+            xs = x + r * np.cos(u) * np.sin(v)
+            ys = y + r * np.sin(u) * np.sin(v)
+            zs = z + r * np.cos(v)
+            ax.plot_wireframe(xs, ys, zs, color="b")
 
-    plt.gca().invert_yaxis()
+        elif shape == "CUBE":
+            s = params[0] / 2
+            vertices = [
+                (x - s, y - s, z - s), (x + s, y - s, z - s),
+                (x + s, y + s, z - s), (x - s, y + s, z - s),
+                (x - s, y - s, z + s), (x + s, y - s, z + s),
+                (x + s, y + s, z + s), (x - s, y + s, z + s)
+            ]
+            edges = [
+                (0,1),(1,2),(2,3),(3,0),
+                (4,5),(5,6),(6,7),(7,4),
+                (0,4),(1,5),(2,6),(3,7)
+            ]
+            for start, end in edges:
+                ax.plot(*zip(vertices[start], vertices[end]), color='r')
+
+        elif shape == "CUBOID":
+            w, h, d = [val / 2 for val in params]
+            vertices = [
+                (x - w, y - h, z - d), (x + w, y - h, z - d),
+                (x + w, y + h, z - d), (x - w, y + h, z - d),
+                (x - w, y - h, z + d), (x + w, y - h, z + d),
+                (x + w, y + h, z + d), (x - w, y + h, z + d)
+            ]
+            edges = [
+                (0,1),(1,2),(2,3),(3,0),
+                (4,5),(5,6),(6,7),(7,4),
+                (0,4),(1,5),(2,6),(3,7)
+            ]
+            for start, end in edges:
+                ax.plot(*zip(vertices[start], vertices[end]), color='g')
+
+        elif shape == "CYLINDER":
+            if len(params) >= 2:
+                r, h = params[0], params[1]
+                z_vals = np.linspace(0, h, 30)
+                theta = np.linspace(0, 2*np.pi, 30)
+                theta_grid, z_grid = np.meshgrid(theta, z_vals)
+                x_grid = x + r * np.cos(theta_grid)
+                y_grid = y + r * np.sin(theta_grid)
+                z_grid += z
+                ax.plot_surface(x_grid, y_grid, z_grid, alpha=0.3, color='c')
+
+        elif shape == "CONE":
+            if len(params) >= 2:
+                r, h = params[0], params[1]
+                z_vals = np.linspace(0, h, 30)
+                theta = np.linspace(0, 2*np.pi, 30)
+                theta_grid, z_grid = np.meshgrid(theta, z_vals)
+                radius_grid = r * (1 - z_grid / h)
+                x_grid = x + radius_grid * np.cos(theta_grid)
+                y_grid = y + radius_grid * np.sin(theta_grid)
+                z_grid += z
+                ax.plot_surface(x_grid, y_grid, z_grid, alpha=0.3, color='orange')
+
+        elif shape == "PYRAMID":
+            if len(params) >= 2:
+                b, h = params[0], params[1]  # Use only first two
+                base = [
+                    (x - b/2, y - b/2, z), (x + b/2, y - b/2, z),
+                    (x + b/2, y + b/2, z), (x - b/2, y + b/2, z)
+                ]
+                apex = (x, y, z + h)
+                for i in range(4):
+                    ax.plot(*zip(base[i], base[(i + 1) % 4]), color='m')
+                    ax.plot(*zip(base[i], apex), color='m')
+            else:
+                print(f"Invalid number of parameters for PYRAMID: {params}")
+                continue
+
     plt.show()
 
+def render(ir):
+    is_3d = any(node.value in {"SPHERE", "CUBE", "CUBOID", "CYLINDER", "CONE", "PYRAMID"} for node in ir)
+    if is_3d:
+        render_3d(ir)
 
 # Full Compiler Pipeline
 def compile_dazl(code):
