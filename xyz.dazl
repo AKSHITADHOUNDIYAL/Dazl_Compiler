@@ -1,0 +1,147 @@
+PRINT "Welcome to DAZL with Full Support!"
+
+# String Concatenation
+PRINT "abc" + "def"
+
+#a = 1+2
+PRINT a
+
+#SET X =5
+X = X+1
+PRINT X
+
+# List operations
+CREATE LIST myList
+APPEND myList 5
+APPEND myList 10
+REMOVE myList 5
+LENGTH myList
+DISPLAY myList
+
+# If-else example
+IF 5 > 3 THEN
+    PRINT "Condition is TRUE"
+ELSE
+    PRINT "Condition is FALSE"
+ENDIF
+
+# Loop example
+FOR i = 1 TO 3
+    PRINT "Looping"
+ENDFOR
+
+
+# If-else example
+#IF 5 > 3 THEN
+#    PRINT "Condition is TRUE"
+#ELSE
+#    PRINT "Condition is FALSE"
+#ENDIF
+
+
+#SET name "Alice"
+#SET surnaame "cloi"
+#PRINT name+surnaame
+
+#SET X = 0
+WHILE X < 10
+    PRINT *    
+    X=X+1
+ENDWHILE
+
+
+#BARCHART 
+SET val1 = 10
+SET val2 = 20
+SET val3 = 15
+BARCHART val1 val2 val3
+
+#COLUMN CHART
+SET col1 = 5
+SET col2 = 8
+SET col3 = 12
+COLUMNCHART col1 col2 col3
+
+#LINE CHART
+SET p1 = 1
+SET p2 = 4
+SET p3 = 9
+SET p4 = 16
+LINECHART p1 p2 p3 p4
+
+#PIE CHART
+SET slice1 = 25
+SET slice2 = 35
+SET slice3 = 40
+PIECHART slice1 slice2 slice3
+
+#HISTOGRAM
+SET h1 = [10, 12, 13, 15, 15, 15, 18, 20, 22, 23, 25]
+HISTOGRAM h1
+
+#SCATTERPLOT
+SET x1 = 1
+SET y1 = 2
+SET x2 = 2
+SET y2 = 4
+SET x3 = 3
+SET y3 = 6
+SCATTERPLOT x1 y1 x2 y2 x3 y3
+
+#BUBBLE CHART
+SET x1 = 1
+SET y1 = 2
+SET s1 = 100
+SET x2 = 2
+SET y2 = 3
+SET s2 = 200
+SET x3 = 3
+SET y3 = 4
+SET s3 = 300
+BUBBLECHART x1 y1 s1 x2 y2 s2 x3 y3 s3
+
+#BOX PLOT
+SET boxdata = [7, 8, 5, 9, 6, 10, 15, 7, 8]
+BOXPLOT boxdata
+
+#HEATMAP
+SET size = 3
+SET hdata = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+HEATMAP size hdata
+
+#FLOWCHART
+FLOWCHART ["Start", "Process", "End"]
+
+#CIRCLE 10 10 40
+SHOW
+#SQUARE 0 0 50
+SHOW
+#RECTANGLE 0 0 80 40
+SHOW
+#POLYGON 0 0 50 25 50 50 75 20
+SHOW
+#RHOMBUS 0 0 60 40
+SHOW
+#OVAL 0 0 60 40
+SHOW
+#TRIANGLE 0 0 50 0 25 50
+SHOW
+
+#CUBE 0 0 0 20
+SHOW
+#SPHERE 10 10 10 8
+SHOW
+#CONE 0 0 0 5 15
+SHOW
+#CYLINDER 0 0 0 5 20
+SHOW
+#PYRAMID 0 0 0 5 10
+SHOW
+
+#SQUARE 0 0 50 
+AND
+TRIANGLE 0 0 50 0 25 50 
+
+#CONE 0 0 0 5 15
+#CYLINDER 0 0 0 5 20
+#SHOW
