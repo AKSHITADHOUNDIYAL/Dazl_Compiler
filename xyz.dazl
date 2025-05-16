@@ -30,18 +30,13 @@ FOR i = 1 TO 3
     PRINT "Looping"
 ENDFOR
 
-
-# If-else example
-#IF 5 > 3 THEN
-#    PRINT "Condition is TRUE"
-#ELSE
-#    PRINT "Condition is FALSE"
-#ENDIF
-
-
 #SET name "Alice"
 #SET surnaame "cloi"
 #PRINT name+surnaame
+
+name = "Alice"
+surname = "Cloi"
+PRINT name + surname
 
 #SET X = 0
 WHILE X < 10
@@ -137,10 +132,6 @@ SHOW
 SHOW
 #PYRAMID 0 0 0 5 10
 SHOW
-
-#SQUARE 0 0 50 
-AND
-TRIANGLE 0 0 50 0 25 50 
 
 #CONE 0 0 0 5 15
 #CYLINDER 0 0 0 5 20

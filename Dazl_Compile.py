@@ -23,7 +23,7 @@ def tokenize(lines):
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        parts = re.findall(r'"[^"]*"|:|AND|\'\'|""|\w+|\+|\-|\*|\/|\^|==|!=|<=|>=|<|>|=|\(|\)|\[|\]|,', line)
+        parts = re.findall(r'"[^"]*"|\w+|\+|\-|\*|\/|\^|==|!=|<=|>=|<|>|=|\(|\)|\[|\]|,|THEN|TO', line)
         tokens.append(parts)
     return tokens
 
@@ -40,17 +40,18 @@ def generate_assembly(ir):
     return ir
 
 def resolve_value(val, variables):
-    if val in variables:
-        val = variables[val]
-    try:
-        if isinstance(val, str) and (val.startswith('[') or val.startswith('{')):
-            return ast.literal_eval(val)
-    except (ValueError, SyntaxError):
-        pass
-    try:
-        return ast.literal_eval(str(val))
-    except (ValueError, SyntaxError, TypeError):
+    if isinstance(val, (int, float)):
         return val
+    if isinstance(val, str):
+        val = val.strip()
+        if val in variables:
+            return variables[val]
+        try:
+            return ast.literal_eval(val)
+        except (ValueError, SyntaxError):
+            return val
+    return val
+
 
 def evaluate_condition(lhs, op, rhs, variables):
     lhs = resolve_value(lhs, variables)
@@ -105,8 +106,6 @@ def eval_compare_op(op_node, left, right):
 def eval_ast(node, variables):
     if isinstance(node, ast.Constant):
         return node.value
-    elif isinstance(node, ast.Str):
-        return node.s
     elif isinstance(node, ast.Name):
         return variables.get(node.id, node.id)
     elif isinstance(node, ast.BinOp):
@@ -168,9 +167,6 @@ def render_flowchart(flow_data):
 
     except Exception as e:
         print("Error drawing flowchart:", e)
-
-
-
 
 def validate_flowchart_data(flow_data):
     if not isinstance(flow_data, list):
@@ -270,11 +266,15 @@ def draw_pyramid(x, y, z, size, height, ax3d):
         face = np.array(face)
         ax3d.plot_trisurf(face[:, 0], face[:, 1], face[:, 2], color='orange', alpha=0.6)
 
-
-
 def parse_flowchart_input(arg_str): 
+    global variables  # ensure we access the global variables dictionary
     flow_data = None
     try:
+        arg_str = arg_str.strip()
+        if not arg_str:
+            print("FLOWCHART input is empty.")
+            return None
+
         if arg_str in variables:
             flow_data = variables[arg_str]
             if isinstance(flow_data, str): 
@@ -291,9 +291,17 @@ def parse_flowchart_input(arg_str):
     return flow_data
 
 
+
 def execute_code(code, parent_vars=None, parent_lists=None):
-    variables = dict(parent_vars) if parent_vars else {}
-    lists = dict(parent_lists) if parent_lists else {}
+    if parent_vars is None:
+        variables = {}
+    else:
+        variables = parent_vars  
+
+    if parent_lists is None:
+        lists = {}
+    else:
+        lists = parent_lists 
 
     if parent_vars is None:
         parent_vars = {}
@@ -329,19 +337,18 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             return
 
         all_x, all_y = [], []
-
         has_2d = False
         has_3d = False
 
         if ax2d:
             ax2d.set_aspect('equal')
-
         if ax3d:
             ax3d.set_axis_off()
 
         for shape in combined_shapes:
             shape_type, params = shape
 
+            # 2D Shapes
             if shape_type == 'SQUARE':
                 x, y, side = params
                 draw_square(x, y, side, ax2d)
@@ -403,6 +410,7 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 all_y.extend([p[1] for p in points])
                 has_2d = True
 
+            # 3D Shapes
             elif shape_type == 'CUBE':
                 x, y, z, size = params
                 r = [0, size]
@@ -464,7 +472,7 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 has_3d = True
 
         if has_2d:
-            if all_x and all_y:  
+            if all_x and all_y:
                 pad = 10
                 ax2d.set_xlim(min(all_x) - pad, max(all_x) + pad)
                 ax2d.set_ylim(min(all_y) - pad, max(all_y) + pad)
@@ -479,21 +487,14 @@ def execute_code(code, parent_vars=None, parent_lists=None):
         fig.suptitle("Shapes: " + ", ".join(shape_names), fontsize=14)
 
         plt.tight_layout()
-        plt.show()    
-    
+        plt.show()
 
         shape_buffer.extend(combined_shapes)
         combined_shapes.clear()
 
     i = 0
     while i < len(code):
-        line = code[i]
-        if isinstance(line, list):
-            line = ' '.join(line)
-        else:
-            line = str(line)
-        line = line.strip()
-        tokens = line.split()
+        tokens = code[i]
         if not tokens:
             i += 1
             continue
@@ -517,70 +518,56 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             print(''.join(output))
 
         elif cmd == 'SET':
-            if len(tokens) < 4:
-                    print(f"Invalid SET syntax: {line}")
-                    continue
             var_name = tokens[1]
-            value_expr = " ".join(tokens[3:]).strip()
+            value_expr = ' '.join(tokens[3:]).strip()  
 
-            if value.startswith('[') and value.endswith(']'):
+            if value_expr.startswith('[') or value_expr.startswith('{'):
+                collected_lines = [value_expr]
+                while True:
+                    full_expr = '\n'.join(collected_lines).strip()
+                    if full_expr.endswith(']') or full_expr.endswith('}'):
+                        break
+                    i += 1
+                    if i >= len(code):
+                        break
+                    next_line = str(code[i]).strip()
+                    collected_lines.append(next_line)
                 try:
-                    value = ast.literal_eval(value)
-                    if not isinstance(value, list):
-                        raise ValueError("The value must be a list.")
-                except:
-                    print(f"Error: Invalid list format for {var_name}.")
-                    continue    
-            
-            elif len(tokens) == 4 and tokens[2] in ['+', '-', '*', '/', '^']:
-                val1 = resolve_value(tokens[1], variables)
-                val2 = resolve_value(tokens[3], variables)
-                operator = tokens[2]
+                    value = ast.literal_eval(full_expr)
+                    variables[var_name] = value
+                except Exception as e:
+                    print(f"Error evaluating expression for {var_name}: {e}")
+
+            elif len(tokens) == 5 and tokens[2] == '=' and tokens[4] in ['+', '-', '*', '/', '^']:
+                print(f"Invalid arithmetic operation in SET: {' '.join(tokens)}")
+
+            elif len(tokens) == 6 and tokens[2] == '=' and tokens[4] in ['+', '-', '*', '/', '^']:
+                val1 = resolve_value(tokens[3], variables)
+                val2 = resolve_value(tokens[5], variables)
+                operator = tokens[4]
 
                 try:
                     if operator == '+':
-                        variables[var_name] = val1 + val2
+                        value = val1 + val2
                     elif operator == '-':
-                        variables[var_name] = val1 - val2
+                        value = val1 - val2
                     elif operator == '*':
-                        variables[var_name] = val1 * val2
+                        value = val1 * val2
                     elif operator == '/':
-                        variables[var_name] = val1 / val2
+                        value = val1 / val2
                     elif operator == '^':
-                        variables[var_name] = val1 ** val2
+                        value = val1 ** val2
                 except TypeError as e:
                     print(f"TypeError during operation: {e}")
-                    variables[var_name] = str(val1) + str(val2)
-            elif '=' in tokens:
-                eq_index = tokens.index('=')
-                expr = ' '.join(tokens[eq_index + 1:])
-                value = resolve_value(expr, variables)
-                variables[var_name] = value
+                    value = str(val1) + str(val2)
+
             else:
-                try:
+                value = resolve_value(value_expr, variables)
+                variables[var_name] = value   
 
-                    value = ast.literal_eval(value_expr)
-                except:
-                    value = eval_expr(tokens[3:], variables)
-                variables[var_name] = value
-                print(f"Variable {var_name} assigned value: {variables[var_name]}")
-
-        elif '=' in tokens:
-            eq_index = line.index('=')
-            var_name = line[0]
-            expr_tokens = line[eq_index + 1:]
-            expr_str = ' '.join(expr_tokens)
-            value = None
-
-            try:
-                value = ast.literal_eval(expr_str)
-            except (ValueError, SyntaxError):
-                value = eval_expr(expr_tokens, variables)
-
-            if value is not None:
-                variables[var_name] = value
-            else:
-                print(f"Error evaluating expression for {var_name}")
+         
+        elif cmd == 'SHOW':
+            flush_shape_buffer()
 
         elif cmd == 'CIRCLE':
             cleaned_values = [value.strip('()') for value in tokens[1:4]]
@@ -598,7 +585,7 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 x, y, side = float(x), float(y), float(side)
                 combined_shapes.append(('SQUARE', (x, y, side)))
             except ValueError as e:
-                print(f"Error: Invalid values for square: {e}")    
+                print(f"Error: Invalid values for square: {e}")
 
         elif cmd == 'RECTANGLE':
             cleaned_values = [value.strip('()') for value in tokens[1:5]]
@@ -675,19 +662,6 @@ def execute_code(code, parent_vars=None, parent_lists=None):
         elif cmd == 'PYRAMID':
             x, y, z, size, height = map(lambda v: resolve_value(v, variables), tokens[1:6])
             combined_shapes.append(('PYRAMID', (x, y, z, size, height)))
-
-        elif cmd == 'SHOW':
-            flush_shape_buffer()
-    
-        elif cmd == 'BARCHART':
-            values = [resolve_value(v, variables) for v in tokens[1:]]
-            if all(isinstance(v, (int, float)) for v in values):
-                plt.barh(range(len(values)), values)
-                plt.title("BARCHART")
-                plt.show()
-                plt.close()
-            else:
-                print("BARCHART requires numeric values.")
   
         elif cmd == 'COLUMNCHART':
             values = [resolve_value(v, variables) for v in tokens[1:]]
@@ -720,17 +694,17 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 print("PIECHART requires numeric values.")
 
         elif cmd == 'HISTOGRAM':
-           raw_values = [resolve_value(v, variables) for v in tokens[1:]]
-           values = []
-           for v in raw_values:
-               if isinstance(v, list):
+            raw_values = [resolve_value(v, variables) for v in tokens[1:]]
+            values = []
+            for v in raw_values:
+                if isinstance(v, list):
                     values.extend(v)
-               else:
+                else:
                     values.append(v)
-           plt.hist(values, bins='auto', edgecolor='black')
-           plt.title("HISTOGRAM")
-           plt.show()
-           plt.close()
+            plt.hist(values, bins='auto', edgecolor='black')
+            plt.title("HISTOGRAM")
+            plt.show()
+            plt.close()
 
         elif cmd == 'SCATTERPLOT':
             x_values = [resolve_value(v, variables) for v in tokens[1::2]]
@@ -757,50 +731,94 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             plt.close()
 
         elif cmd == 'HEATMAP':
-            size = int(resolve_value(tokens[1], variables))
-            data = [resolve_value(v, variables) for v in tokens[2:]]
-            matrix = np.array(data).reshape((size, size))
-            plt.imshow(matrix, cmap='hot', interpolation='nearest')
-            plt.title("HEATMAP")
-            plt.colorbar()
-            plt.show()  
-            plt.close()
+            try:
+                size_token = tokens[1]
+                size_val = resolve_value(size_token, variables)
+                size = int(size_val)  
+                raw_data = tokens[2:]
+                data = []
+                for v in raw_data:
+                    val = resolve_value(v, variables)
+                    if isinstance(val, list):
+                        data.extend(val)
+                    else:
+                        data.append(val)
 
-        
+                if len(data) != size * size:
+                    print(f"Error: Data length {len(data)} does not match size*size ({size*size})")
+                    i += 1
+                    continue
+
+                matrix = np.array(data, dtype=float).reshape((size, size))
+                plt.imshow(matrix, cmap='hot', interpolation='nearest')
+                plt.title("HEATMAP")
+                plt.colorbar()
+                plt.show()
+                plt.close()
+            except Exception as e:
+                print(f"Error in HEATMAP: {e}")        
+
+        elif cmd == 'BARCHART':
+            values = [resolve_value(v, variables) for v in tokens[1:]]
+            if all(isinstance(v, (int, float)) for v in values):
+                plt.barh(range(len(values)), values)
+                plt.title("BARCHART")
+                plt.show()
+                plt.close()
+            else:
+                print("BARCHART requires numeric values.")
+
         elif cmd == 'FLOWCHART':
             if len(tokens) < 2:
                 print("Invalid FLOWCHART syntax. Expected: FLOWCHART <list> or <variable>")
+                i += 1
                 continue
-            arg_str = " ".join(tokens[1:]).strip()  
+            arg_str = " ".join(tokens[1:]).strip()
             flow_data = parse_flowchart_input(arg_str)
             if not validate_flowchart_data(flow_data):
                 print("Invalid flowchart data format")
+                i += 1
                 continue
             try:
-                render_flowchart(flow_data)  
+                render_flowchart(flow_data)
             except Exception as e:
                 print("Error rendering flowchart:", e)
 
-        elif cmd == 'CREATE' and tokens[1] == 'LIST':
-            lists[tokens[2]] = []
+        elif cmd == 'CREATE' and len(tokens) > 2 and tokens[1] == 'LIST':
+            lists[tokens[2]] = {}
 
         elif cmd == 'APPEND':
-            lists[tokens[1]].append(resolve_value(tokens[2], variables))
+            if tokens[1] in lists:
+                lists[tokens[1]].append(resolve_value(tokens[2], variables))
+            else:
+                print(f"List '{tokens[1]}' not found.")
 
         elif cmd == 'REMOVE':
-            lists[tokens[1]].remove(resolve_value(tokens[2], variables))
+            if tokens[1] in lists:
+                try:
+                    lists[tokens[1]].remove(resolve_value(tokens[2], variables))
+                except ValueError:
+                    print(f"Value not found in list '{tokens[1]}'.")
+            else:
+                print(f"List '{tokens[1]}' not found.")
 
         elif cmd == 'LENGTH':
-            print(len(lists[tokens[1]]))
+            if tokens[1] in lists:
+                print(len(lists[tokens[1]]))
+            else:
+                print(f"List '{tokens[1]}' not found.")
 
         elif cmd == 'DISPLAY':
-            list_name = tokens[1]
-            if list_name in lists:
-                print(lists[list_name])
+            if tokens[1] in lists:
+                print(lists[tokens[1]])
             else:
-                print(f"List '{list_name}' not found.")
+                print(f"List '{tokens[1]}' not found.")
 
         elif cmd == 'IF':
+            if len(tokens) < 4:
+                print("Invalid IF syntax.")
+                i += 1
+                continue
             if not evaluate_condition(tokens[1], tokens[2], tokens[3], variables):
                 nest = 1
                 while i < len(code) - 1:
@@ -839,6 +857,11 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             i = j
 
         elif cmd == 'WHILE':
+            if len(tokens) < 4:
+                print(f"Invalid WHILE condition: {' '.join(tokens)}")
+                i += 1
+                continue
+
             condition = tokens[1:4]
             loop_start = i + 1
             nest = 1
@@ -852,7 +875,7 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                     nest -= 1
                     if nest == 0:
                         break
-                if code[i][0] != 'WHILE' and code[i][0] != 'ENDWHILE':   
+                if code[i][0] not in ['WHILE', 'ENDWHILE']:   
                         loop_body.append(code[i])
 
             max_iterations = 500
@@ -862,16 +885,36 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                    print("Infinite loop detected. Breaking.")
                    break
                 execute_code(loop_body, variables, lists)
-                variables['X'] = variables['X'] + 1
-        
-                condition = line[1:4]  
+
                 count += 1
 
             i += 1  
             continue
 
-        i += 1
+        elif '=' in tokens and len(tokens) >= 3:
+            try:
+                eq_index = tokens.index('=')
+                var_name = tokens[0]
+                expr_tokens = tokens[eq_index + 1:]
+                value_str = ' '.join(expr_tokens)
 
+                try:
+                    value = eval_expr(expr_tokens, variables)
+                    if value is None:
+                        value = ast.literal_eval(value_str)
+                except Exception:
+                    value = ast.literal_eval(value_str)
+
+                variables[var_name] = value
+            except Exception as e:
+                print(f"Error processing assignment: {' '.join(tokens)} → {e}")
+            i += 1
+            continue
+        
+        else:
+            print(f"Unknown command: {cmd}")
+
+        i += 1
 
 def compile_and_run(filename):
     with open(filename, "r") as f:
