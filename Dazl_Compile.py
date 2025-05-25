@@ -785,7 +785,7 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 print("Error rendering flowchart:", e)
 
         elif cmd == 'CREATE' and len(tokens) > 2 and tokens[1] == 'LIST':
-            lists[tokens[2]] = {}
+            lists[tokens[2]] = []
 
         elif cmd == 'APPEND':
             if tokens[1] in lists:
