@@ -16,6 +16,7 @@ import ast
 import json
 import datetime
 import operator as op
+import streamlit as st
 
 def tokenize(lines):
     tokens = []
@@ -163,7 +164,9 @@ def render_flowchart(flow_data):
 
         plt.tight_layout(pad=0)
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-        plt.show()
+        st.pyplot(plt.gcf())
+        plt.clf()
+
 
     except Exception as e:
         print("Error drawing flowchart:", e)
@@ -487,7 +490,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
         fig.suptitle("Shapes: " + ", ".join(shape_names), fontsize=14)
 
         plt.tight_layout()
-        plt.show()
+        st.pyplot(plt.gcf())
+        plt.clf()
+
 
         shape_buffer.extend(combined_shapes)
         combined_shapes.clear()
@@ -668,8 +673,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             if all(isinstance(v, (int, float)) for v in values):
                 plt.bar(range(len(values)), values)
                 plt.title("COLUMNCHART")
-                plt.show()
-                plt.close()
+                st.pyplot(plt.gcf())
+                plt.clf()
+
             else:
                 print("COLUMNCHART requires numeric values.")
 
@@ -678,8 +684,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             if all(isinstance(v, (int, float)) for v in values):
                 plt.plot(values)
                 plt.title("LINECHART")
-                plt.show()
-                plt.close()
+                st.pyplot(plt.gcf())
+                plt.clf()
+
             else:
                 print("LINECHART requires numeric values.")
 
@@ -688,8 +695,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             if all(isinstance(v, (int, float)) for v in values):
                 plt.pie(values, labels=[str(v) for v in values])
                 plt.title("PIECHART")
-                plt.show()
-                plt.close()
+                st.pyplot(plt.gcf())
+                plt.clf()
+
             else:
                 print("PIECHART requires numeric values.")
 
@@ -703,16 +711,18 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                     values.append(v)
             plt.hist(values, bins='auto', edgecolor='black')
             plt.title("HISTOGRAM")
-            plt.show()
-            plt.close()
+            st.pyplot(plt.gcf())
+            plt.clf()
+
 
         elif cmd == 'SCATTERPLOT':
             x_values = [resolve_value(v, variables) for v in tokens[1::2]]
             y_values = [resolve_value(v, variables) for v in tokens[2::2]]
             plt.scatter(x_values, y_values)
             plt.title("SCATTERPLOT")
-            plt.show()  
-            plt.close()
+            st.pyplot(plt.gcf())
+            plt.clf()
+
 
         elif cmd == 'BUBBLECHART':
             x_vals = [resolve_value(v, variables) for v in tokens[1::3]]
@@ -720,15 +730,17 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             sizes = [resolve_value(v, variables) for v in tokens[3::3]]
             plt.scatter(x_vals, y_vals, s=sizes)
             plt.title("BUBBLECHART")
-            plt.show()
-            plt.close()
+            st.pyplot(plt.gcf())
+            plt.clf()
+
 
         elif cmd == 'BOXPLOT':
             data = [resolve_value(v, variables) for v in tokens[1:]]
             plt.boxplot(data)
             plt.title("BOXPLOT")
-            plt.show()
-            plt.close()
+            st.pyplot(plt.gcf())
+            plt.clf()
+
 
         elif cmd == 'HEATMAP':
             try:
@@ -753,8 +765,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
                 plt.imshow(matrix, cmap='hot', interpolation='nearest')
                 plt.title("HEATMAP")
                 plt.colorbar()
-                plt.show()
-                plt.close()
+                st.pyplot(plt.gcf())
+                plt.clf()
+
             except Exception as e:
                 print(f"Error in HEATMAP: {e}")        
 
@@ -763,8 +776,9 @@ def execute_code(code, parent_vars=None, parent_lists=None):
             if all(isinstance(v, (int, float)) for v in values):
                 plt.barh(range(len(values)), values)
                 plt.title("BARCHART")
-                plt.show()
-                plt.close()
+                st.pyplot(plt.gcf())
+                plt.clf()
+
             else:
                 print("BARCHART requires numeric values.")
 
@@ -925,6 +939,28 @@ def compile_and_run(filename):
     ir = generate_ir(analyzed)
     assembly = generate_assembly(ir)
     execute_code(assembly)
+
+from io import StringIO
+
+def compile_from_code_string(code_str):
+    buffer = StringIO()
+    import sys
+    original_stdout = sys.stdout
+    sys.stdout = buffer  # Redirect print output
+
+    try:
+        lines = code_str.strip().splitlines()
+        tokens = tokenize(lines)
+        ast_rep = parse(tokens)
+        analyzed = semantic_analysis(ast_rep)
+        ir = generate_ir(analyzed)
+        assembly = generate_assembly(ir)
+        execute_code(assembly)
+    finally:
+        sys.stdout = original_stdout  # Reset print output
+
+    return buffer.getvalue()
+
 
 if __name__ == "__main__":
     import sys
