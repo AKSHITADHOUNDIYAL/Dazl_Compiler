@@ -25,6 +25,7 @@ from matplotlib import pyplot as plt
 from io import BytesIO
 import io
 import sys
+import streamlit as st
 import operator as op
 
 #######################################
@@ -153,15 +154,12 @@ TT_EOF         = 'EOF'
 
 KEYWORDS = [
   # Programming Keywords
-  'VAR','AND', 'OR', 'NOT',
+  'VAR','AND', 'OR', 'NOT','SET',
   'IF', 'ELSE', 'FOR', 'TO',  'WHILE', 'FOREND', 'WHILEEND',
   'PRINT',
 
   # List operations
   'APPEND', 'REMOVE', 'LENGTH', 'DISPLAY',
-
-  # STRING
-  'SET',
 
   # Charts / Plots
   'BARCHART', 'COLUMNCHART', 'LINECHART', 'PIECHART', 'HISTOGRAM',
@@ -653,7 +651,7 @@ class Parser:
     if res.error:
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
-        "Expected int, float, identifier, '+', '-', '(', '[', 'IF', 'FOR', 'WHILE', 'FUN' or 'NOT'"
+        "Expected int, float, identifier, '+', '-', '(', '[', 'IF', 'FOR', 'WHILE' or 'NOT'"
       ))
 
     return res.success(node)
@@ -1938,7 +1936,9 @@ def draw_circle(params):
     ax.set_xlim(-radius-10, radius+10)
     ax.set_ylim(-radius-10, radius+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_square(params):
     side = int(params[0])
@@ -1948,7 +1948,9 @@ def draw_square(params):
     ax.set_xlim(-side-10, side+10)
     ax.set_ylim(-side-10, side+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_rectangle(params):
     width = int(params[0])
@@ -1959,7 +1961,9 @@ def draw_rectangle(params):
     ax.set_xlim(-width-10, width+10)
     ax.set_ylim(-height-10, height+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_oval(params):
     width = int(params[0])
@@ -1970,7 +1974,9 @@ def draw_oval(params):
     ax.set_xlim(-width/2-10, width/2+10)
     ax.set_ylim(-height/2-10, height/2+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_triangle(params):
     x1, y1, x2, y2, x3, y3 = map(int, params)
@@ -1980,7 +1986,9 @@ def draw_triangle(params):
     ax.set_xlim(min(x1, x2, x3)-10, max(x1, x2, x3)+10)
     ax.set_ylim(min(y1, y2, y3)-10, max(y1, y2, y3)+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_rhombus(params):
     x1, y1, x2, y2 = map(int, params)
@@ -1990,7 +1998,9 @@ def draw_rhombus(params):
     ax.set_xlim(-x1-10, x1+10)
     ax.set_ylim(-y2-10, y2+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_polygon(params):
     points = [tuple(map(int, params[i:i+2])) for i in range(0, len(params), 2)]
@@ -2000,7 +2010,9 @@ def draw_polygon(params):
     ax.set_xlim(min([p[0] for p in points])-10, max([p[0] for p in points])+10)
     ax.set_ylim(min([p[1] for p in points])-10, max([p[1] for p in points])+10)
     ax.set_aspect('equal', 'box')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_cube(params):
     side = int(params[0])
@@ -2020,7 +2032,9 @@ def draw_cube(params):
     ]
     for face in faces:
         ax.plot_trisurf([v[0] for v in face], [v[1] for v in face], [v[2] for v in face], color='blue')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_sphere(params):
     radius = int(params[0])
@@ -2032,7 +2046,9 @@ def draw_sphere(params):
     y = radius * np.outer(np.sin(u), np.sin(v))
     z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
     ax.plot_surface(x, y, z, color='green')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_cone(params):
     radius = int(params[0])
@@ -2043,7 +2059,9 @@ def draw_cone(params):
     x = radius * (1 - z / height) * np.cos(np.linspace(0, 2 * np.pi, 100))
     y = radius * (1 - z / height) * np.sin(np.linspace(0, 2 * np.pi, 100))
     ax.plot_trisurf(x, y, z, color='red')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_cylinder(params):
     radius = int(params[0])
@@ -2054,7 +2072,9 @@ def draw_cylinder(params):
     x = radius * np.cos(np.linspace(0, 2 * np.pi, 100))
     y = radius * np.sin(np.linspace(0, 2 * np.pi, 100))
     ax.plot_trisurf(x, y, z, color='purple')
-    plt.show()
+    st.pyplot(plt.gcf())
+    plt.clf()
+
 
 def draw_pyramid(x, y, z, size, height):
     fig = plt.figure()
@@ -2082,8 +2102,9 @@ def draw_pyramid(x, y, z, size, height):
     ax.set_ylim([y - 1, y + size + 1])
     ax.set_zlim([z - 1, z + height + 1])
     
-    plt.show()
-    plt.close()    
+    st.pyplot(plt.gcf())
+    plt.clf()
+   
 
 def resolve_value(val, variables):
     if val in variables:
@@ -2536,6 +2557,24 @@ def compile_dazl(code, filename):
     "images": image_outputs
 }
 
+def compile_from_code_string(code_str):
+    buffer = StringIO()
+    import sys
+    original_stdout = sys.stdout
+    sys.stdout = buffer  # Redirect print output
+
+    try:
+        lines = code_str.strip().splitlines()
+        tokens = tokenize(lines)
+        ast_rep = parse(tokens)
+        analyzed = semantic_analysis(ast_rep)
+        ir = generate_ir(analyzed)
+        assembly = generate_assembly(ir)
+        execute_code(assembly)
+    finally:
+        sys.stdout = original_stdout  # Reset print output
+
+    return buffer.getvalue()
 
 # Entry Point
 if __name__ == "__main__":
